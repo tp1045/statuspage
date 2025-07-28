@@ -19,18 +19,21 @@ jobs:
         id: check_failed
         run: |
           bash ./notify_failed_systems.sh
-          if [[ -f logs/email_triggers.txt ]]; then
+          if [[ -f logs/email_triggers.txt && -s logs/email_triggers.txt ]]; then
             echo "failed_systems<<EOF" >> $GITHUB_OUTPUT
             cat logs/email_triggers.txt >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
           fi
       - name: Log failed systems to output
-        if: success() && hashFiles('logs/email_triggers.txt') != ''
+        if: steps.check_failed.outputs.has_failures == 'true'
         run: |
          echo "The following systems have failed and require attention:"
          echo "${{ steps.check_failed.outputs.failed_systems }}"
       - name: Update failed_systems.log after notifications
-        if: success() && hashFiles('logs/email_triggers.txt') != ''
+        if: steps.check_failed.outputs.has_failures == 'true'
         run: bash ./update_failed_systems_log.sh
       - name: Commit and Push Logs
         run: |
