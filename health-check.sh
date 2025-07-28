@@ -54,6 +54,30 @@ do
   else
     echo "    $dateTime, $result"
   fi
+
+
+  # Log failed systems to failed_systems.log (email notifications)
+  if [[ "$result" == "failed" ]]; then
+    # if exists update timestamp, keep emailsent as is (every hr, compared in notify_failed_systems.sh)
+    if grep -q "^$key," logs/failed_systems.log 2>/dev/null; then
+      awk -F',' -v k="$key" -v t="$dateTime" 'BEGIN{OFS=","} {if($1==k){$2=t} print $0}' logs/failed_systems.log > logs/failed_systems.tmp && mv logs/failed_systems.tmp logs/failed_systems.log
+    else
+      echo "$key,$dateTime," >> logs/failed_systems.log
+    fi
+  else
+    # Remove from failed_systems.log if it exists (system recovered)
+    if [[ -f logs/failed_systems.log ]]; then
+      if grep -q "^$key," logs/failed_systems.log 2>/dev/null; then
+        grep -v "^$key," logs/failed_systems.log > logs/failed_systems.tmp 2>/dev/null || true
+        if [[ -s logs/failed_systems.tmp ]]; then
+          mv logs/failed_systems.tmp logs/failed_systems.log
+        else
+          # If tmp file is empty, remove the original file
+          rm -f logs/failed_systems.log logs/failed_systems.tmp
+        fi
+      fi
+    fi
+  fi
 done
 
 if [[ $commit == true ]]
