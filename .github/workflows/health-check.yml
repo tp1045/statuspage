@@ -16,12 +16,19 @@ jobs:
         id: shell_script_run
         run: bash ./health-check.sh
       - name: Check for failed systems and trigger email notifications
-        run: bash ./notify_failed_systems.sh
+        id: check_failed
+        run: |
+          bash ./notify_failed_systems.sh
+          if [[ -f logs/email_triggers.txt ]]; then
+            echo "failed_systems<<EOF" >> $GITHUB_OUTPUT
+            cat logs/email_triggers.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
       - name: Log failed systems to output
         if: success() && hashFiles('logs/email_triggers.txt') != ''
         run: |
          echo "The following systems have failed and require attention:"
-         echo "${{ steps.shell_script_run.outputs.failed_keys }}"
+         echo "${{ steps.check_failed.outputs.failed_systems }}"
       - name: Update failed_systems.log after notifications
         if: success() && hashFiles('logs/email_triggers.txt') != ''
         run: bash ./update_failed_systems_log.sh
