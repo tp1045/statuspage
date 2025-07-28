@@ -32,3 +32,10 @@ jobs:
       - name: Update failed_systems.log after notifications
         if: success() && hashFiles('logs/email_triggers.txt') != ''
         run: bash ./update_failed_systems_log.sh
+      - name: Commit and Push Logs
+        run: |
+          git config --global user.name 'Tom Pool'
+          git config --global user.email 'tom.pool@york.ac.uk.com'
+          git add -A --force logs/
+          git commit -am '[Automated] Update Health Check Logs'
+          git push
