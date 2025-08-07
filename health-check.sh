@@ -26,6 +26,40 @@ echo "Starting health checks with ${#KEYSARRAY[@]} configs:"
 
 mkdir -p logs
 
+
+# Clean up failed_systems.log - remove any systems no longer in urls.cfg
+if [[ -f logs/failed_systems.log ]]; then
+  echo "Cleaning up failed_systems.log for removed systems..."
+  temp_file="logs/failed_systems_clean.tmp"
+  > "$temp_file"
+  
+  while IFS="," read -r key timestamp emailsent; do
+    key=$(echo "$key" | xargs)  # Remove whitespace
+    if [[ -n "$key" ]]; then
+      # Check if this key exists in current KEYSARRAY
+      found=false
+      for current_key in "${KEYSARRAY[@]}"; do
+        if [[ "$current_key" == "$key" ]]; then
+          found=true
+          break
+        fi
+      done
+      
+      if [[ "$found" == true ]]; then
+        echo "$key,$timestamp,$emailsent" >> "$temp_file"
+      else
+        echo "  Removing obsolete system from failed_systems.log: $key"
+      fi
+    fi
+  done < logs/failed_systems.log
+  
+  if [[ -s "$temp_file" ]]; then
+    mv "$temp_file" logs/failed_systems.log
+  else
+    rm -f logs/failed_systems.log "$temp_file"
+  fi
+fi
+
 for (( index=0; index < ${#KEYSARRAY[@]}; index++))
 do
   key="${KEYSARRAY[index]}"
